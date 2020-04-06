@@ -1,0 +1,145 @@
+---
+title: "Homework 1_Group1"
+output: pdf_document
+Group 1 Member names:
+  Prathamesh Sharma
+  Gauri Jibhakate
+  Ekta Omkar Kulkarni
+   Ganesa Parmar
+   Rachana Ravikumar
+date: "`r Sys.Date()`"
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Load_packages, include=TRUE}
+#Pacman tool used for Package-management
+if(!require("pacman")) install.packages("pacman")
+if(!require("goeveg")) install.packages("goeveg")
+pacman::p_load(data.table,ggplot2,reshape2,gridExtra,goeveg)
+search()
+```
+# Question 1
+## Compute the minimum, maximum, mean, median, and standard deviation for each of the numeric variables using data.table package. Which variable(s) has the largest variability? Explain your answer.
+```{r Question_1}
+#Here, we first load the file to R
+utilities.df <- read.csv('Utilities.csv')
+utilities.dt <- setDT(utilities.df)
+
+#To compute the min, max, mean, median, quartiles of the numeric variables of the dataset
+summary(utilities.dt[,2:9]) 
+
+#To find Standard Deviation of the numeric variables of the dataset
+sd_numeric_variables <- apply(utilities.dt[,2:9],2,sd)
+names(sd_numeric_variables) <- paste("sd_",names(sd_numeric_variables),sep="")
+sd_numeric_variables
+
+#To find the coefficient of variation of the numeric variables of the dataset
+cv_numeric_variables <- apply(utilities.dt[,2:9],2,cv) 
+names(cv_numeric_variables) <- paste("cv_",names(cv_numeric_variables),sep="")  
+cv_numeric_variables
+
+```
+
+##### Explanation:  
+*When considering the standard deviation to be the measure of variability, we see here that the standard deviation (sd) of Sales is the largest hence we consider that Sales has the largest variability compared to other variables.
+
+*But actually when comparing variables or set of data on basis of their measure of variability, we take into account of their coefficient of variation (cv) and when we take that into account, we can clearly see that Nuclear has the higher coefficient of variation and hence Nuclear has the largest variability in this case and is more spread out as compared to other variables.
+
+# Question 2
+## Create boxplots for each of the numeric variables. Are there any extreme values for any of the variables? Which ones? Explain your answer.
+```{r Question_2}
+#The same becomes clear when we plot the values in a box-plot. For this we use ggplot2 library pack.
+a <- ggplot(utilities.dt) +
+  geom_boxplot(aes(y = Fixed_charge), 
+               fill = "wheat", outlier.color = "firebrick2")
+b <- ggplot(utilities.dt) +
+  geom_boxplot(aes(y = RoR), 
+               fill = "wheat", outlier.color = "firebrick2")
+c <- ggplot(utilities.dt) +
+  geom_boxplot(aes(y = Cost), 
+               fill = "wheat", outlier.color = "firebrick2")
+d <- ggplot(utilities.dt) +
+  geom_boxplot(aes(y = Load_factor), 
+               fill = "wheat", outlier.color = "firebrick2")
+e <- ggplot(utilities.dt) +
+  geom_boxplot(aes(y = Demand_growth), 
+               fill = "wheat", outlier.color = "firebrick2")
+f <- ggplot(utilities.dt) +
+  geom_boxplot(aes(y = Sales), 
+               fill = "wheat", outlier.color = "firebrick2")
+g <- ggplot(utilities.dt) +
+  geom_boxplot(aes(y = Nuclear), 
+               fill = "wheat", outlier.color = "firebrick2")
+h <- ggplot(utilities.dt) +
+  geom_boxplot(aes(y = Fuel_Cost), 
+               fill = "wheat", outlier.color = "firebrick2")
+grid.arrange(a, b, c, d, e, f, g, h, ncol=4)
+
+```
+##### Explanation:  
+*Extreme values or outliers are defined as values in the dataset that fall outside the range of whiskers i.e left whisker and right whisker wherein the left whisker is the maximum of (Q1-1.5IQR and the minimum point) and the right whisker is the minimum of (Q3 + 1.5IQR and the maximum point).
+
+*Fixed_charge has extreme values on both the high and low side. Fixed_charge has low extreme values of 0.75 and 0.76 for Nevada and San Diego respectively. It has high extreme value of 1.49 for NY. 
+
+*Sales has extreme values on the high side. Sales has high extreme values of 15,991 and 17,441 for Nevada and Puget respectively. 
+
+# Question 3
+## Create a heatmap for the numeric variables. Discuss any interesting trend you see in this chart.
+```{r Question_3}
+#Inorder to see the correlation between different paramaters of the dataset, we use a heat-map
+
+mydata <- utilities.dt[,2:9] 
+cormat <- round(cor(mydata),2)
+
+#cormat is melted using reshape package
+melted_cormat <- melt(cormat)
+
+ggplot(melted_cormat, aes(x=Var1, y=Var2, fill=value)) +
+  scale_fill_gradient(low="wheat", high="orangered") +
+  geom_tile() +
+  geom_text(aes(x=Var1, y=Var2,label=value))
+
+
+```
+##### Explanation:
+*From the heat-map, it is clear that there's a highly positive correlation between (RoR)Rate of Return on capital and (Fixed_charge)Fixed Charge Coverage Ratio (0.64). What it basically means is that a company which pays its fixed charges (before tax) effectively will naturally be better equipped to give a better return on investment. 
+
+*It is both intuitive and interesting that the Fixed_charge has a high correlation with the (RoR)Rate of Return on Capital. This makes sense that if the company has good cash flow and cover their debt obligations, their rate of return would be correspondingly higher due to the lower cost of debt associated. 
+
+*Another interesting correlation is between Fuel_Cost (in cents per KWh) and Sales (KWh use per year) (-0.56). The highly negative correlation clearly shows that the more Sale of energy when the fuel costs are low.
+
+# Question 4
+## 4. Run principal component analysis using unscaled numeric variables in the dataset. How do you interpret the results from this model?
+```{r Question_4}
+#Inorder to reduce the dimension of the datasets, we make use of Principal Component Analysis
+
+utilities.pca <- prcomp(utilities.dt[,2:9],center=TRUE)
+utilities.pca
+summary(utilities.pca)
+utilities.pca$rotation
+```
+##### Explanation:
+
+*Based on the principle component analysis, PC1 appears to account for 99.98% and PC2 appears to account for .014% of the variation in the data. Therefore, PC1 should be the primary focus of further analysis. Taking a deeper dive, we see that sales accounts for almost all of the variation in PC1. This indicates that sales might be too heavily weighted and therefore skewing the analysis. 
+
+# Question 2
+## Next, run principal component model after scaling the numeric variables. Did the results/interpretations change? How so? Explain your answers.
+```{r Question_5}
+#Scaling of PCA is done to reduce effect of Sales
+
+utilities_scaled.pca <- prcomp(utilities.dt[,2:9],center=TRUE,scale=TRUE)
+utilities_scaled.pca
+summary(utilities_scaled.pca)
+utilities_scaled.pca$rotation
+
+```
+##### Explanation:
+
+*When we scale the data, we see a big change in the distribution of the amount of weighting each Principle Component accounts for. We see that the distribution is much more even, with PC1 account for 27.16%, PC2 - 23.75%, PC3 - 16.54%, PC 4 - 12.46%, PC5 - 8.1%, and PC6 -7.1%. 
+
+*In order to achieve the 90% threshold, we will have to consider PC1 - PC6 in order to capture most of the variation. We can see from this analysis that scaling the data is the appropriate way to perform this analysis, to prevent our analysis from being negatively affected by measurement units.
+
+
+
