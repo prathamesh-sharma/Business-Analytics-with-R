@@ -1,12 +1,8 @@
 ---
 title: "Homework 1_Group1"
 output: pdf_document
-Group 1 Member names:
-  Prathamesh Sharma
-  Gauri Jibhakate
-  Ekta Omkar Kulkarni
-   Ganesa Parmar
-   Rachana Ravikumar
+Author: Prathamesh Sharma
+
 date: "`r Sys.Date()`"
 ---
 ```{r setup, include=FALSE}
