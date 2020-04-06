@@ -1,0 +1,272 @@
+---
+title: "HW2_Group1"
+output: pdf_document
+author:  Prathamesh Sharma,Gauri Jibhakate,Ekta Omkar Kulkarni,Ganesa Parma,Rachana Ravikumar. 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Load_packages, include=TRUE}
+#Pacman tool used for Package-management
+if(!require("pacman")) install.packages("pacman")
+pacman::p_load(caret, corrplot, glmnet, mlbench,
+tidyverse, ggplot2, goeveg, reshape, gridExtra, leaps, 
+dplyr, tidyr, forecast, MASS) 
+search()
+```
+
+# Question 1
+## Create a correlation table and scatterplots between FARE and the predictors. What seems to be the best single predictor of FARE? Explain your answer
+```{r Question 1}
+#Reading the file 'Airfares.csv'
+airfares_raw.df <- read.csv("Airfares.csv") 
+str(airfares_raw.df)
+head(airfares_raw.df)
+
+#remove the four predictors S_CODE,S_CITY,E_CODE,E_CITY
+airfares.df <- airfares_raw.df[,!(names(airfares_raw.df)
+%in% c('S_CODE','S_CITY','E_CODE','E_CITY'))]
+str(airfares.df)
+head(airfares.df)
+
+#remove non-numeric values
+airfares1.df <- airfares.df[,-c(3,4,10,11)]
+str(airfares1.df)
+head(airfares1.df)
+
+#Correlation Table between FARE and the predictors
+airfarecor <- round(cor(airfares1.df,airfares1.df$FARE),2) 
+colnames(airfarecor) <- 'FARE' 
+airfarecor
+
+#Scatterplot between FARE and the predictors
+ggplot(data= airfares1.df, aes(COUPON, FARE))+geom_point(color='blue')+
+geom_smooth(method="lm",se=FALSE)#COUPON v FARE
+ggplot(data= airfares1.df, aes(NEW, FARE))+geom_point(color='blue')+
+geom_smooth(method="lm",se=FALSE)#NEW V FARE
+ggplot(data= airfares1.df, aes(HI, FARE))+geom_point(color='blue')+
+geom_smooth(method="lm",se=FALSE)#HI V FARE
+ggplot(data= airfares1.df, aes(S_INCOME, FARE))+geom_point(color='blue')+
+geom_smooth(method="lm",se=FALSE)#S_INCOME V FARE
+ggplot(data= airfares1.df, aes(E_INCOME, FARE))+geom_point(color='blue')+
+geom_smooth(method="lm",se=FALSE)#E_INCOME V FARE
+ggplot(data= airfares1.df, aes(S_POP, FARE))+geom_point(color='blue')+
+geom_smooth(method="lm",se=FALSE)#S_POP V FARE
+ggplot(data= airfares1.df, aes(E_POP, FARE))+geom_point(color='blue')+
+geom_smooth(method="lm",se=FALSE)#E_POP V FARE
+ggplot(data= airfares1.df, aes(DISTANCE, FARE))+geom_point(color='blue')+
+geom_smooth(method="lm",se=FALSE)#DISTANCE V FARE
+ggplot(data= airfares1.df, aes(PAX, FARE))+geom_point(color='blue')+
+geom_smooth(method="lm",se=FALSE)#PAX V FARE
+
+```
+
+Explanation :
+*DISTANCE seems to be the best single predictor of FARE since the correlation between the two (0.67) is quite strong as compared to others and also it is quite understandable from the scatterplot that the two variables - FARE and DISTANCE have a strong correlation.
+
+# Question 2
+## Explore the categorical predictors by computing the percentage of flights in each category. Create a pivot table with the average fare in each category. Which categorical predictor seems best for predicting FARE? Explain your answer.
+```{r Question_2}
+
+#Percentage of flights in VACATION categories
+vacation_category <- transform(as.data.frame(table(airfares.df$VACATION)),
+                               Percentage=Freq/nrow(airfares.df)*100)
+names(vacation_category)[c(1,3)]=c('Vacation Route','Percentage of Flights')
+vacation_category
+
+#Percentage of flights in SW categories
+sw_category <- transform(as.data.frame(table(airfares.df$SW)),
+                         Percentage=Freq/nrow(airfares.df)*100)
+names(sw_category)[c(1,3)]=
+c('Southwest Airlines serving the route','Percentage of Flights')
+sw_category
+
+#Percentage of flights in SLOT categories
+slot_category <- transform(as.data.frame(table(airfares.df$SLOT)),
+                           Percentage=Freq/nrow(airfares.df)*100)
+names(slot_category)[c(1,3)]=c('End Airport SLOT','Percentage of Flights')
+slot_category
+
+#Percentage of flights in GATE categories
+gate_category <- transform(as.data.frame(table(airfares.df$GATE)),
+                           Percentage=Freq/nrow(airfares.df)*100)
+names(gate_category)[c(1,3)]=c('End Airport GATE','Percentage of Flights')
+gate_category
+
+#Pivot Table with average fare in VACATION categories
+pivot_vacation <- airfares.df %>%
+  group_by(VACATION) %>% summarize(AVG_FARE=mean(FARE))
+pivot_vacation
+
+#Pivot Table with average fare in SW categories
+pivot_sw <- airfares.df %>%
+  group_by(SW) %>% summarize(AVG_FARE=mean(FARE))
+pivot_sw
+
+#Pivot Table with average fare in SLOT categories
+pivot_slot <- airfares.df %>%
+  group_by(SLOT) %>% summarize(AVG_FARE=mean(FARE))
+pivot_slot
+
+#Pivot Table with average fare in GATE categories
+pivot_gate <- airfares.df %>%
+  group_by(GATE) %>% summarize(AVG_FARE=mean(FARE))
+pivot_gate
+
+```
+Explanation:
+* The SW(Southwest Airlines) categorical predictor seems best for predicting FARE. We observe that the average FARE of  SW(Southwest Airlines) is spread. Flights from Southwest has an average of 98.38 and flights that are not from Southwest has an average of 188.18. Thus SW affects the price of FARE the most.
+
+# Question 3
+## Create data partition by assigning 80% of the records to the training dataset. Use rounding if 80% of the index generates a fraction. Also, set the seed at 42.
+```{r Question_3}
+#Create data partition by assigning 80% of the records to the training dataset
+set.seed(42) 
+train.index <- sample(c(nrow(airfares.df)),round(0.8*nrow(airfares.df))) 
+length(train.index) 
+airfaretrain.df<-airfares.df[train.index,] 
+airfarevalid.df<-airfares.df[-train.index,] 
+head(airfaretrain.df) 
+head(airfarevalid.df) 
+nrow(airfarevalid.df)
+
+```
+
+# Question 4
+## Using leaps package, run stepwise regression to reduce the number of predictors. Discuss the results from this model.
+```{r Question_4}
+#Create Linear Model  
+airfare.lm <- lm(FARE ~ ., data = airfaretrain.df) 
+options(scipen=999)
+summary(airfare.lm)   
+
+#Stepwise Regression using Leaps package to reduce the number of predictors
+airfare.lm.stepwise <- regsubsets(FARE~.,
+data= airfaretrain.df, nbest = 1,
+nvmax=dim(airfaretrain.df)[2],method = "seqrep") 
+sum1 <- summary(airfare.lm.stepwise)
+
+sum1$which
+
+print("R Square")
+sum1$rsq
+print("Adjusted R Square")
+sum1$adjr2
+print("Mallow's Cp")
+sum1$cp
+
+```
+Explanation :
+*When we look at adjusted R square, we see that model with 11 predictors gives us the highest adjusted R square value. Thus stepwise function has improved the model by removing the "New", S_INCOME and "Coupon" predictors. The final list of variables are VACATION + SW + HI + E_INCOME + S_POP + E_POP + SLOT + GATE + DISTANCE + PAX.  
+
+
+# Question 5
+## Repeat the process in (4) using exhaustive search instead of stepwise regression. Compare the resulting best model to the one you obtained in (4) in terms of the predictors included in the final model.
+```{r Question_5}
+
+#Exhaustive Search 
+airfare.exhaust <-regsubsets(FARE~., data= airfaretrain.df, 
+                  nbest = 1, nvmax=dim(airfaretrain.df)[2],                                            
+method = "exhaustive") 
+sum <- summary(airfare.exhaust)
+
+#show models 
+sum$which
+
+#show metrics
+sum$rsq 
+sum$adjr2 
+sum$cp       
+```
+Explanation : 
+* We see that there is not much significant increase in the adjusted R square after the 10th predictor. In the Mallow CP output we can see no change after the 10th predictor and the value becomes 11.08605. This shows us that the model should have 10 predictors. Thus we see that in stepwise the number of predictors shown are 11 and in exhaustive search the number of predictors are 10.
+
+
+
+# Question 6
+## Compare the predictive accuracy of both models—stepwise regression and exhaustive search—using measures such as RMSE.
+```{r Question_6}
+airfare.lm<-lm(formula = FARE ~ NEW+VACATION + SW +
+                 HI + E_INCOME + S_POP + E_POP +
+SLOT + GATE + DISTANCE + PAX, data = airfaretrain.df )
+airfare.lm.pred <- predict(airfare.lm,airfarevalid.df)
+accuracy(airfare.lm.pred,airfarevalid.df$FARE)
+
+
+airfare.exhaust<-lm(formula = FARE ~ VACATION + SW + 
+                      HI + E_INCOME + S_POP + E_POP +
+SLOT + GATE + DISTANCE + PAX, data = airfaretrain.df)
+airfare.exhaust.pred <- predict(airfare.exhaust,airfarevalid.df)
+accuracy(airfare.exhaust.pred,airfarevalid.df$FARE)
+```
+Explantion:
+* The RMSE of Stepwise Regression is 36.82363 and RMSE for the Exhaustive Regression is 36.8617. This shows that the Stepwise regression is better as its Root Mean Squared Error is lower.
+
+
+# Question 7
+## Using the exhaustive search model, predict the average fare on a route with the following characteristics: COUPON = 1.202, NEW = 3, VACATION = No, SW = No, HI = 4442.141, S_INCOME = $28,760, E_INCOME = $27,664, S_POP = 4,557,004, E_POP = 3,195,503, SLOT = Free, GATE = Free, PAX = 12,782, DISTANCE = 1976 miles.
+```{r Question_7}
+valida.df <- data.frame('COUPON' = 1.202, 'NEW' = 3, 'VACATION' = 'No', 'SW' =
+'No', 'HI' = 4442.141, 'S_INCOME' = 28760, 'E_INCOME' = 27664, 'S_POP' =
+4557004, 'E_POP' = 3195503, 'SLOT' = 'Free', 'GATE' = 'Free', 'PAX' = 12782,
+'DISTANCE' = 1976)
+
+
+airfare.lm<-lm(formula = FARE ~ VACATION + SW + HI + E_INCOME + S_POP + E_POP + 
+    SLOT + GATE + DISTANCE + PAX, data = airfaretrain.df )
+airfare.lm.pred <- predict(airfare.lm,valida.df)
+#pacman::p_load(data.table, forecast, leaps, tidyverse)
+airfare.lm.pred
+
+```
+Explanation:
+* The average fare with the above test values is 247.684
+
+# Question 8
+## Predict the reduction in average fare on the route in question (7.), if Southwest decides to cover this route [using the exhaustive search model above].
+```{r Question_8}
+valida1.df <- data.frame('COUPON' = 1.202, 'NEW' = 3, 'VACATION' = 'No', 'SW' =
+'Yes', 'HI' = 4442.141, 'S_INCOME' = 28760, 'E_INCOME' = 27664, 'S_POP' =
+4557004, 'E_POP' = 3195503, 'SLOT' = 'Free', 'GATE' = 'Free', 'PAX' = 12782,
+'DISTANCE' = 1976)
+
+airfare.lm<-lm(formula = FARE ~ VACATION + SW + HI + E_INCOME + S_POP + E_POP + 
+    SLOT + GATE + DISTANCE + PAX, data = airfaretrain.df )
+airfare.lm.pred <- predict(airfare.lm,valida1.df)
+airfare.lm.pred
+
+```
+Explanation:
+* If southwest decides to cover this route we get a reduction of 40. SW being the best categorical factor it affects the price and the fair drops from 247.684 to 207.1558.   
+
+
+# Question 9
+## Using leaps package, run backward selection regression to reduce the number of predictors. Discuss the results from this model.
+```{r Question_9}
+airfares.back <- regsubsets(FARE ~ .,
+data = airfaretrain.df, nbest = 1, nvmax = dim(airfares.df)[2],
+method = "backward")
+summ_back <- summary(airfares.back)
+
+summ_back$which
+print("R square")
+summ_back$rsq
+print("Adjusted R square")
+summ_back$adjr2
+print("Mallow’s Cp")
+summ_back$cp
+```
+Explanation:
+* We see that the backward regression has improved the model by removing the "New" and "Coupon" predictors. The value of adjusted R square does not change after the 10th predictor. The value Cp increases very less after 11.08605. Thus a 10 predictor model is the best.  
+
+
+# Question 10
+## Now run a backward selection model using stepAIC() function. Discuss the results from this model, including the role of AIC in this model.
+```{r Question_10}
+airfare.lm.bselect.aic <- stepAIC(airfare.lm, direction = "backward")
+summary(airfare.lm.bselect.aic)
+```
+Explanation:
+*After running backward selection model using stepAIC(), we see that we get a much improved model or the best model by AIC by removing the "Coupon","S_INCOME" and "NEW" predictors which were least significanT or less contributive towards FARE and this model maintained a lower AIC of 3649.22 by removing these predictors.The adjusted R-squared value of .7759 indicates that this is fairly good model. The extremely small P-value for the model also indicates this. The role of AIC in this model is to check that after dropping a predictor, how much it would affect the AIC and we need to basically lower the AIC until it can be lowered to get the best model.
