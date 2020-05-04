@@ -20,15 +20,18 @@ search()
 
 
 **Question 1:  Remove the observations with unknown salary information. How many observations were removed in this process? **
+
 ```{r Question 1(Load Data)}
 hitters.temp.df<-Hitters
 sum(is.na(hitters.temp.df$Salary))
 hitters.df<-hitters.temp.df[!is.na(hitters.temp.df$Salary),]
 ```
+
 **Answer 1: Total 59 unknown salary information has been removed**
 
 
 **Question2: Generate log-transform the salaries. Can you justify this transformation? **
+
 ```{r Question 2(Log-Transform) }
 ##Skewness before log-transform
 ggplot(data = hitters.df, aes(Salary)) + geom_histogram()
@@ -42,6 +45,7 @@ skewness(hitters.df$LogSalary)
 
 
 **Question3: Create a scatterplot with Hits on the y-axis and Years on the x-axis using all the observations. Color code the observations using the log Salary variable. What patterns do you notice on this chart, if any? **
+
 ```{r Question 3(Scatter Plot)}
 ggplot(hitters.df, aes(Years,Hits)) +
   geom_point(aes(color=LogSalary)) 
