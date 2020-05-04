@@ -1,6 +1,6 @@
 ---
-title: "HW4_Group1"
-author: Prathamesh Sharma,Gauri Jibhakate,Ekta Omkar Kulkarni,Ganesa Parma,Rachana Ravikumar.
+title: "Regression Tree"
+author: Prathamesh Sharma
 date: "4/17/2020"
 output: pdf_document
 ---
@@ -28,9 +28,6 @@ hitters.df<-hitters.temp.df[!is.na(hitters.temp.df$Salary),]
 **Answer 1: Total 59 unknown salary information has been removed**
 
 
-
-
-
 **Question2: Generate log-transform the salaries. Can you justify this transformation? **
 ```{r Question 2(Log-Transform) }
 ##Skewness before log-transform
@@ -44,20 +41,12 @@ skewness(hitters.df$LogSalary)
 **Answer 2 : Before log-transform, the graph indicates that Salary is right-skewed with skewness of 1.57,After log-transform, the data is approximately symmetric with the skewness of -0.18**
 
 
-
-
-
 **Question3: Create a scatterplot with Hits on the y-axis and Years on the x-axis using all the observations. Color code the observations using the log Salary variable. What patterns do you notice on this chart, if any? **
 ```{r Question 3(Scatter Plot)}
 ggplot(hitters.df, aes(Years,Hits)) +
   geom_point(aes(color=LogSalary)) 
 ```
 **Answer3: We can infer that as the player has more years in the league their salary increases although this does not necesarrily mean the player has more hits. There are few observations which are outliers to that pattern like the two in the bottom left corner**
-
-
-
-
-
 
 
 
@@ -88,11 +77,6 @@ coef(search, 5)
 
 
 
-
-
-
-
-
 **Question 5: Now create a training data set consisting of 80 percent of the observations, and atest data set consisting of the remaining observations.**
 
 ```{r Question 5(Data Partition)}
@@ -101,9 +85,6 @@ train.index <- createDataPartition(hitters.df$LogSalary, p = 0.8, list = FALSE)
 train.df <- hitters.df[train.index, -c(19)]
 valid.df <- hitters.df[-train.index, -c(19)]
 ```
-
-
-
 
 **Question 6:Generate a regression tree of log Salary using only Years and Hits variables from the training data set. Which players are likely to receive highest salaries according to this model? Write down the rule and elaborate on it.**
 
@@ -119,11 +100,6 @@ rpart.rules(cv.ct, cover = TRUE)
 **Answer6: The most important factor in determining Players Salary is Years. Players who have been in the league for at least 5 years tend to make more than players who have only been in the league for less than that time. Hits also plays a factor in determining a player’s salary.**
 **The player with more than 5 years of experience and who has more than 118 hits is ikely to recive highest salary.**
 **Rule: when Years >=5 & Hits >= 118**
-
-
-
-
-
 
 
 
@@ -161,14 +137,6 @@ ggplot(d, aes(lambda, mse)) +
 **Training Error(MSE) reaches a minimum of 0.109 when Lambda is 0.1**
 
 
-
-
-
-
-
-
-
-
 **Question9: Which variables appear to be the most important predictors in the boosted model?**
 
 ```{r Question9 (Boosting)}
@@ -191,10 +159,6 @@ data_frame(variable = names(var_imp),
          title = 'Variable Importance for Gradient Boosted Model')
 ```
 **Answer9: Variable CHits is the most important predictor in Boosted model.**
-
-
-
-
 
 
 
