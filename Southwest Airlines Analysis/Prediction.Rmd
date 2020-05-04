@@ -1,5 +1,5 @@
 ---
-title: "HW2_Group1"
+title: "Prediction"
 output: pdf_document
 author:  Prathamesh Sharma. 
 ---
