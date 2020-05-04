@@ -1,5 +1,5 @@
 ---
-title: "Homework 1_Group1"
+title: "Visualization and PCA"
 output: pdf_document
 Author: Prathamesh Sharma
 
